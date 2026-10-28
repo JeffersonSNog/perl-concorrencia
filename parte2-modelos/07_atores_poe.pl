@@ -1,39 +1,34 @@
 #!/usr/bin/env perl
-# Parte 2.7 - Atores com POE (Perl Object Environment, CPAN)
-#
-# POE é o framework de concorrência mais antigo do Perl (1998). Cada
-# POE::Session funciona como um ator: tem um alias (endereço), estado
-# próprio no HEAP e só reage a eventos (mensagens) enviados pelo kernel
-# com post(). Tudo roda num event loop cooperativo de uma thread.
+# Atores com POE
 use strict;
 use warnings;
-$| = 1;   # sem buffer no STDOUT: mostra a ordem real das mensagens
+$| = 1;
 use POE;
 
-# Ator "contador"
+# contador
 POE::Session->create(
     inline_states => {
         _start => sub {
-            $_[KERNEL]->alias_set('contador');      # nome para receber mensagens
-            $_[HEAP]{total} = 0;                    # estado privado
+            $_[KERNEL]->alias_set('contador');
+            $_[HEAP]{total} = 0;
         },
         soma => sub {
             my ($heap, $n, $remetente) = @_[HEAP, ARG0, ARG1];
             $heap->{total} += $n;
             print "contador: +$n => $heap->{total}\n";
-            $_[KERNEL]->post($remetente, 'ack', $heap->{total});   # responde
+            $_[KERNEL]->post($remetente, 'ack', $heap->{total});
         },
         fim => sub { $_[KERNEL]->alias_remove('contador') },
     },
 );
 
-# Ator "cliente"
+# cliente
 POE::Session->create(
     inline_states => {
         _start => sub {
             $_[KERNEL]->alias_set('cliente');
             $_[KERNEL]->post(contador => soma => $_, 'cliente') for 1 .. 3;
-            $_[KERNEL]->delay(tchau => 0.2);          # timer
+            $_[KERNEL]->delay(tchau => 0.2);
         },
         ack   => sub { print "  cliente recebeu ack: total=$_[ARG0]\n" },
         tchau => sub {
@@ -44,5 +39,5 @@ POE::Session->create(
     },
 );
 
-POE::Kernel->run();     # event loop; termina quando não há mais sessões ativas
+POE::Kernel->run();
 print "POE kernel terminou\n";

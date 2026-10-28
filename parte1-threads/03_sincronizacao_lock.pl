@@ -1,12 +1,8 @@
 #!/usr/bin/env perl
-# Parte 1.3 - Sincronização: condição de corrida e lock()
-#
-# lock() é um lock consultivo (advisory) e RECURSIVO sobre uma variável
-# shared. Ele é liberado automaticamente ao sair do escopo léxico
-# (não existe unlock).
+# Condição de corrida e lock()
 use strict;
 use warnings;
-$| = 1;   # sem buffer no STDOUT: mostra a ordem real das mensagens
+$| = 1;
 use threads;
 use threads::shared;
 
@@ -20,12 +16,12 @@ sub roda {
         threads->create(sub {
             for (1 .. $ITER) {
                 if ($com_lock) {
-                    lock($contador);          # seção crítica
+                    lock($contador);
                     $contador = $contador + 1;
                 } else {
-                    my $v = $contador;        # lê
-                    $v++;                     # modifica
-                    $contador = $v;           # escreve -> outra thread pode ter escrito no meio!
+                    my $v = $contador;
+                    $v++;
+                    $contador = $v;
                 }
             }
         });
@@ -38,7 +34,7 @@ my $esperado = $THREADS * $ITER;
 printf "sem lock: %6d (esperado %d)  <- condição de corrida\n", roda(0), $esperado;
 printf "com lock: %6d (esperado %d)\n", roda(1), $esperado;
 
-# lock é recursivo: a mesma thread pode travar de novo sem deadlock
+# lock é recursivo
 my $x :shared = 0;
 sub incrementa { lock($x); $x++ }
 threads->create(sub { lock($x); incrementa() for 1 .. 3 })->join;
